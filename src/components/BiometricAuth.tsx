@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Circle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface BiometricAuthProps {
   onAuthSuccess: () => void;
@@ -11,8 +12,25 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanPhase, setScanPhase] = useState<'ready' | 'scanning' | 'analyzing' | 'complete'>('ready');
   const [neuralNodes, setNeuralNodes] = useState<boolean[]>(Array(100).fill(false));
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // If user is already authenticated, auto-complete the scan
+    if (user) {
+      setScanPhase('complete');
+      setScanProgress(100);
+      setTimeout(() => {
+        onAuthSuccess();
+      }, 1000);
+    }
+  }, [user, onAuthSuccess]);
 
   const startScan = () => {
+    if (user) {
+      onAuthSuccess();
+      return;
+    }
+
     setIsScanning(true);
     setScanPhase('scanning');
     setScanProgress(0);
@@ -53,6 +71,10 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
   };
 
   const getScanPhaseText = () => {
+    if (user) {
+      return 'Neural Link Verified - Access Granted';
+    }
+    
     switch (scanPhase) {
       case 'ready':
         return 'Bio-Neural Authentication Ready';
@@ -68,6 +90,8 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
   };
 
   const getScanPhaseColor = () => {
+    if (user) return 'text-neon-green';
+    
     switch (scanPhase) {
       case 'ready':
         return 'text-neon-blue';
@@ -92,12 +116,12 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
             <Circle className="w-16 h-16 text-neon-blue" />
             
             {/* Scanning line effect */}
-            {isScanning && (
+            {(isScanning || user) && (
               <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-neon-blue to-transparent animate-scan" />
             )}
             
             {/* Pulse effect when scanning */}
-            {isScanning && (
+            {(isScanning || user) && (
               <div className="absolute inset-0 rounded-full border-2 border-neon-blue animate-ping opacity-50" />
             )}
           </div>
@@ -109,7 +133,7 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
             {getScanPhaseText()}
           </h3>
           <p className="text-sm text-text-color/60 font-cyber">
-            Neural scan required for secure quantum link establishment
+            {user ? 'Neural patterns verified' : 'Neural scan required for secure quantum link establishment'}
           </p>
         </div>
 
@@ -150,7 +174,7 @@ const BiometricAuth = ({ onAuthSuccess }: BiometricAuthProps) => {
               : 'bg-gradient-to-r from-neon-purple to-neon-blue hover:shadow-[0_5px_15px_rgba(0,243,255,0.3)] hover:scale-105'
           }`}
         >
-          {isScanning ? 'Authenticating...' : 'Start Bio-Neural Authentication'}
+          {user ? 'Access Granted' : (isScanning ? 'Authenticating...' : 'Start Bio-Neural Authentication')}
         </button>
 
         {/* Security Notice */}

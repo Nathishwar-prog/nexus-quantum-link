@@ -94,6 +94,20 @@ body {
   }
 }
 
+@keyframes scan {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     transform: scale(0.8);
@@ -156,6 +170,27 @@ body {
   }
 }
 
+@keyframes quantum-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-10px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(5px) rotate(240deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
 /* Utility classes */
 .glitch {
   animation: glitch 5s infinite;
@@ -163,6 +198,10 @@ body {
 
 .scanner-line {
   animation: scanEffect 8s ease-in-out infinite;
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
 }
 
 .hologram-flicker {
@@ -175,6 +214,10 @@ body {
 
 .quantum-glow {
   box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .neon-text {
@@ -219,6 +262,18 @@ body {
 }
 
 /* Scrollbar styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-neon-blue\/30 {
+  scrollbar-color: rgba(0, 243, 255, 0.3) transparent;
+}
+
+.scrollbar-track-transparent {
+  scrollbar-track-color: transparent;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }

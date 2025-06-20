@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { Circle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import BiometricAuth from './BiometricAuth';
-import ChatInterface from './ChatInterface';
+import RealTimeChatInterface from './RealTimeChatInterface';
 import NeuralVisualizer from './NeuralVisualizer';
 
 interface HolographicInterfaceProps {
@@ -20,8 +21,18 @@ interface HolographicInterfaceProps {
 }
 
 const HolographicInterface = ({ isActive, onClose, systemStatus }: HolographicInterfaceProps) => {
+  const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [aiWaves, setAiWaves] = useState(Array.from({ length: 7 }, () => Math.random() * 30 + 5));
+
+  useEffect(() => {
+    // If user is logged in, set authenticated
+    if (user) {
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -132,7 +143,7 @@ const HolographicInterface = ({ isActive, onClose, systemStatus }: HolographicIn
               {!isAuthenticated ? (
                 <BiometricAuth onAuthSuccess={handleAuthSuccess} />
               ) : (
-                <ChatInterface />
+                <RealTimeChatInterface />
               )}
             </div>
           </div>

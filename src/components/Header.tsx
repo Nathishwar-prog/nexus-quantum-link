@@ -1,78 +1,67 @@
 
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { LogOut, User, Settings } from 'lucide-react';
 
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const navItems = [
-    { label: 'Neural Interface', href: '#interface' },
-    { label: 'Quantum Core', href: '#quantum' },
-    { label: 'Data Streams', href: '#streams' },
-    { label: 'System Status', href: '#status' },
-    { label: 'Documentation', href: '#docs' }
-  ];
+  const handleSignOut = async () => {
+    await signOut();
+    setShowUserMenu(false);
+  };
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 glass border-b border-neon-blue/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <a href="#" className="flex items-center space-x-2 group">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-neon-purple to-neon-blue animate-pulse-glow" />
-                <div className="absolute inset-1 rounded-full bg-dark-bg" />
-                <div className="absolute inset-2 rounded-full bg-neon-blue animate-pulse" />
-              </div>
-              <span className="text-xl font-quantum font-bold tracking-tight">
-                NEXUS<span className="glitch text-neon-pink">•</span>2099
-              </span>
-            </a>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="relative group px-3 py-2 text-sm font-cyber font-medium text-text-color/80 hover:text-neon-blue transition-all duration-300"
-              >
-                <span className="relative z-10">{item.label}</span>
-                <div className="absolute inset-0 scale-x-0 group-hover:scale-x-100 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 rounded transition-transform duration-300 origin-left" />
-                <div className="absolute bottom-0 left-0 w-full h-0.5 scale-x-0 group-hover:scale-x-100 bg-gradient-to-r from-neon-blue to-transparent transition-transform duration-300 origin-left" />
-              </a>
-            ))}
-          </nav>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="relative w-8 h-8 focus:outline-none"
-            >
-              <div className={`absolute w-6 h-0.5 bg-neon-blue transition-all duration-300 ${isMenuOpen ? 'rotate-45 top-4' : 'top-2'}`} />
-              <div className={`absolute w-6 h-0.5 bg-neon-blue transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'top-4'}`} />
-              <div className={`absolute w-6 h-0.5 bg-neon-blue transition-all duration-300 ${isMenuOpen ? '-rotate-45 top-4' : 'top-6'}`} />
-            </button>
-          </div>
+    <header className="relative z-20 p-6">
+      <div className="flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple" />
+          <h1 className="text-2xl font-quantum font-bold glitch">
+            NEXUS
+          </h1>
         </div>
 
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden glass border-t border-neon-blue/20 mt-2 rounded-lg">
-            <nav className="px-4 py-6 space-y-4">
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="block px-3 py-2 text-sm font-cyber font-medium text-text-color/80 hover:text-neon-blue hover:bg-neon-blue/10 rounded transition-all duration-300"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+        {/* User Menu */}
+        {user && (
+          <div className="relative">
+            <Button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              variant="ghost"
+              className="glass hover:bg-neon-blue/10 text-neon-blue border border-neon-blue/30"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Neural Agent
+            </Button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 glass-dark rounded-lg border border-neon-blue/30 overflow-hidden">
+                <div className="p-3 border-b border-neon-blue/20">
+                  <p className="text-sm font-cyber text-neon-blue">Connected as</p>
+                  <p className="text-xs text-text-color/60 truncate">{user.email}</p>
+                </div>
+                
+                <div className="p-2">
+                  <button
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full text-left px-3 py-2 text-sm font-cyber text-text-color hover:bg-neon-blue/10 rounded flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Neural Settings
+                  </button>
+                  
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-3 py-2 text-sm font-cyber text-red-400 hover:bg-red-500/10 rounded flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
