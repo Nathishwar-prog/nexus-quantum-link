@@ -44,6 +44,21 @@ const RealTimeChatInterface = () => {
     });
   };
 
+  const getUserDisplayName = (message: any) => {
+    if (message.profiles?.display_name) {
+      return message.profiles.display_name;
+    }
+    if (message.profiles?.username) {
+      return message.profiles.username;
+    }
+    return 'Neural Agent';
+  };
+
+  const getUserInitial = (message: any) => {
+    const displayName = getUserDisplayName(message);
+    return displayName[0].toUpperCase();
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -112,16 +127,16 @@ const RealTimeChatInterface = () => {
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-r from-neon-green to-neon-blue flex items-center justify-center">
                         <span className="text-xs font-bold text-white">
-                          {(message.profiles?.display_name || message.profiles?.username || 'Agent')[0].toUpperCase()}
+                          {getUserInitial(message)}
                         </span>
                       </div>
                       <span className="text-sm font-cyber text-neon-blue">
-                        {message.profiles?.display_name || message.profiles?.username || 'Neural Agent'}
+                        {getUserDisplayName(message)}
                       </span>
                     </div>
                   )}
                   
-                  <p className="text-sm font-cyber leading-relaxed break-words">
+                  <p className="text-sm font-cyber leading-relaxed break-words text-text-color">
                     {message.content}
                   </p>
                   
@@ -143,14 +158,14 @@ const RealTimeChatInterface = () => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Transmit your thoughts to the neural network..."
-            className="flex-1 bg-dark-bg/50 border border-neon-blue/30 rounded-lg px-4 py-3 text-sm font-cyber resize-none focus:outline-none focus:border-neon-blue focus:shadow-[0_0_0_3px_rgba(0,243,255,0.2)] transition-all duration-300"
+            className="flex-1 bg-dark-bg/50 border border-neon-blue/30 rounded-lg px-4 py-3 text-sm font-cyber resize-none focus:outline-none focus:border-neon-blue focus:shadow-[0_0_0_3px_rgba(0,243,255,0.2)] transition-all duration-300 text-text-color placeholder:text-text-color/50"
             rows={2}
             disabled={isTyping}
           />
           <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isTyping}
-            className="px-6 py-3 bg-gradient-to-r from-neon-purple to-neon-blue rounded-lg font-cyber font-bold uppercase tracking-wide hover:shadow-[0_5px_15px_rgba(0,243,255,0.3)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-neon-purple to-neon-blue rounded-lg font-cyber font-bold uppercase tracking-wide hover:shadow-[0_5px_15px_rgba(0,243,255,0.3)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 text-white"
           >
             <Send className="w-4 h-4" />
             <span className="hidden sm:inline">Send</span>

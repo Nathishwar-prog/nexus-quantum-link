@@ -33,76 +33,99 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load initial messages
+  // Load initial messages with profile data
   useEffect(() => {
     if (!user) return;
 
     const loadMessages = async () => {
       console.log('Loading messages for room:', roomId);
       
-      const { data, error } = await supabase
+      // First load messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          id,
-          content,
-          user_id,
-          room_id,
-          created_at
-        `)
+        .select('*')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true })
         .limit(100);
 
-      if (error) {
-        console.error('Error loading messages:', error);
+      if (messagesError) {
+        console.error('Error loading messages:', messagesError);
         toast({
           title: "Connection Error",
           description: "Failed to load chat history",
           variant: "destructive"
         });
-      } else {
-        console.log('Messages loaded:', data);
-        // Transform data to match Message interface
-        const messagesWithProfiles = data?.map(msg => ({
-          ...msg,
-          profiles: null // We'll load profiles separately if needed
-        })) || [];
-        setMessages(messagesWithProfiles);
+        setLoading(false);
+        return;
       }
+
+      // Load profiles for the users in messages
+      const userIds = [...new Set(messagesData?.map(msg => msg.user_id) || [])];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, username, display_name')
+        .in('id', userIds);
+
+      // Combine messages with profiles
+      const messagesWithProfiles = messagesData?.map(msg => {
+        const profile = profilesData?.find(p => p.id === msg.user_id);
+        return {
+          ...msg,
+          profiles: profile ? {
+            username: profile.username,
+            display_name: profile.display_name
+          } : null
+        };
+      }) || [];
+
+      console.log('Messages loaded with profiles:', messagesWithProfiles);
+      setMessages(messagesWithProfiles);
       setLoading(false);
     };
 
     loadMessages();
   }, [user, roomId, toast]);
 
-  // Load online users
+  // Load online users with profile data
   useEffect(() => {
     if (!user) return;
 
     const loadUsers = async () => {
       console.log('Loading users for room:', roomId);
       
-      const { data, error } = await supabase
+      // Load presence data
+      const { data: presenceData, error } = await supabase
         .from('user_presence')
-        .select(`
-          user_id,
-          status,
-          last_seen
-        `)
+        .select('*')
         .eq('room_id', roomId)
         .eq('status', 'online');
 
-      if (!error && data) {
-        console.log('Users loaded:', data);
-        // Transform data to match UserPresence interface
-        const usersWithProfiles = data.map(user => ({
-          ...user,
-          profiles: null // We'll load profiles separately if needed
-        }));
-        setUsers(usersWithProfiles);
-      } else {
+      if (error) {
         console.error('Error loading users:', error);
+        return;
       }
+
+      // Load profiles for online users
+      const userIds = presenceData?.map(p => p.user_id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, username, display_name')
+        .in('id', userIds);
+
+      // Combine presence with profiles
+      const usersWithProfiles = presenceData?.map(presence => {
+        const profile = profilesData?.find(p => p.id === presence.user_id);
+        return {
+          ...presence,
+          profiles: profile ? {
+            username: profile.username,
+            display_name: profile.display_name
+          } : null
+        };
+      }) || [];
+
+      console.log('Users loaded with profiles:', usersWithProfiles);
+      setUsers(usersWithProfiles);
     };
 
     loadUsers();
@@ -143,17 +166,26 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         async (payload) => {
           console.log('New message received:', payload);
           
-          // Create message with basic data
+          // Load profile for the message sender
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('username, display_name')
+            .eq('id', payload.new.user_id)
+            .single();
+
           const newMessage: Message = {
             id: payload.new.id,
             content: payload.new.content,
             user_id: payload.new.user_id,
             room_id: payload.new.room_id,
             created_at: payload.new.created_at,
-            profiles: null
+            profiles: profileData ? {
+              username: profileData.username,
+              display_name: profileData.display_name
+            } : null
           };
 
-          console.log('Message processed:', newMessage);
+          console.log('Message processed with profile:', newMessage);
           setMessages(prev => [...prev, newMessage]);
         }
       )
@@ -174,22 +206,32 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
           console.log('Presence changed, reloading users');
           
           // Reload users when presence changes
-          const { data, error } = await supabase
+          const { data: presenceData, error } = await supabase
             .from('user_presence')
-            .select(`
-              user_id,
-              status,
-              last_seen
-            `)
+            .select('*')
             .eq('room_id', roomId)
             .eq('status', 'online');
 
-          if (!error && data) {
-            console.log('Users reloaded:', data);
-            const usersWithProfiles = data.map(user => ({
-              ...user,
-              profiles: null
-            }));
+          if (!error && presenceData) {
+            // Load profiles for online users
+            const userIds = presenceData.map(p => p.user_id);
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, username, display_name')
+              .in('id', userIds);
+
+            const usersWithProfiles = presenceData.map(presence => {
+              const profile = profilesData?.find(p => p.id === presence.user_id);
+              return {
+                ...presence,
+                profiles: profile ? {
+                  username: profile.username,
+                  display_name: profile.display_name
+                } : null
+              };
+            });
+
+            console.log('Users reloaded with profiles:', usersWithProfiles);
             setUsers(usersWithProfiles);
           } else {
             console.error('Error reloading users:', error);
