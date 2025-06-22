@@ -25,8 +25,11 @@ const Index = () => {
   });
 
   useEffect(() => {
-    // Redirect to auth if not authenticated
+    console.log('Index page - Auth state:', { user: user?.email, loading });
+    
+    // Only redirect to auth if we're sure there's no user and loading is complete
     if (!loading && !user) {
+      console.log('No user found, redirecting to auth');
       navigate('/auth');
       return;
     }
@@ -47,19 +50,23 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const handleConnectToNexus = () => {
+    console.log('Connecting to NEXUS chat');
     setActiveInterface('chat');
   };
 
   const handleCloseInterface = () => {
+    console.log('Closing interface');
     setActiveInterface(null);
   };
 
   const handleOpenProfile = () => {
+    console.log('Opening profile');
     setActiveInterface('profile');
   };
 
   // Show loading while checking auth
   if (loading) {
+    console.log('Showing loading state');
     return (
       <div className="min-h-screen bg-dark-bg text-text-color flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -70,10 +77,13 @@ const Index = () => {
     );
   }
 
-  // Redirect handled in useEffect, but show loading if user is null
+  // Don't render anything if no user (redirect will happen in useEffect)
   if (!user) {
+    console.log('No user, returning null (redirect should happen)');
     return null;
   }
+
+  console.log('Rendering main interface for user:', user.email);
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-color relative overflow-hidden">

@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,16 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to main page if user is already authenticated
+  useEffect(() => {
+    if (user) {
+      console.log('User is authenticated, redirecting to main page');
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,22 +33,37 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        await signIn(email, password);
+        console.log('Attempting login for:', email);
+        const { error } = await signIn(email, password);
+        if (!error) {
+          console.log('Login successful, will redirect via useEffect');
+        }
       } else {
+        console.log('Attempting signup for:', email);
+        
         if (password !== confirmPassword) {
           alert('Passwords do not match');
           return;
         }
         
-        await signUp(email, password, {
+        const { error } = await signUp(email, password, {
           username,
           display_name: displayName
         });
+        
+        if (!error) {
+          console.log('Signup successful');
+        }
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render if user is already authenticated
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-color flex items-center justify-center p-4">

@@ -11,9 +11,9 @@ export interface Message {
   room_id: string;
   created_at: string;
   profiles?: {
-    username: string;
-    display_name: string;
-  };
+    username: string | null;
+    display_name: string | null;
+  } | null;
 }
 
 export interface UserPresence {
@@ -21,9 +21,9 @@ export interface UserPresence {
   status: string;
   last_seen: string;
   profiles?: {
-    username: string;
-    display_name: string;
-  };
+    username: string | null;
+    display_name: string | null;
+  } | null;
 }
 
 export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655440000') => {
@@ -38,11 +38,17 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
     if (!user) return;
 
     const loadMessages = async () => {
+      console.log('Loading messages for room:', roomId);
+      
       const { data, error } = await supabase
         .from('messages')
         .select(`
-          *,
-          profiles (
+          id,
+          content,
+          user_id,
+          room_id,
+          created_at,
+          profiles!messages_user_id_fkey (
             username,
             display_name
           )
@@ -59,6 +65,7 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
           variant: "destructive"
         });
       } else {
+        console.log('Messages loaded:', data);
         setMessages(data || []);
       }
       setLoading(false);
@@ -72,11 +79,15 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
     if (!user) return;
 
     const loadUsers = async () => {
+      console.log('Loading users for room:', roomId);
+      
       const { data, error } = await supabase
         .from('user_presence')
         .select(`
-          *,
-          profiles (
+          user_id,
+          status,
+          last_seen,
+          profiles!user_presence_user_id_fkey (
             username,
             display_name
           )
@@ -85,7 +96,10 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         .eq('status', 'online');
 
       if (!error && data) {
+        console.log('Users loaded:', data);
         setUsers(data);
+      } else {
+        console.error('Error loading users:', error);
       }
     };
 
@@ -96,19 +110,26 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscriptions for user:', user.id);
+
     // Update presence
     const updatePresence = async () => {
-      await supabase.rpc('update_user_presence', {
-        p_room_id: roomId,
-        p_status: 'online'
-      });
+      try {
+        await supabase.rpc('update_user_presence', {
+          p_room_id: roomId,
+          p_status: 'online'
+        });
+        console.log('Presence updated successfully');
+      } catch (error) {
+        console.error('Error updating presence:', error);
+      }
     };
 
     updatePresence();
 
     // Subscribe to new messages
     const messagesChannel = supabase
-      .channel('messages')
+      .channel('messages-channel')
       .on(
         'postgres_changes',
         {
@@ -118,12 +139,18 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
           filter: `room_id=eq.${roomId}`
         },
         async (payload) => {
+          console.log('New message received:', payload);
+          
           // Fetch the message with profile data
           const { data, error } = await supabase
             .from('messages')
             .select(`
-              *,
-              profiles (
+              id,
+              content,
+              user_id,
+              room_id,
+              created_at,
+              profiles!messages_user_id_fkey (
                 username,
                 display_name
               )
@@ -132,7 +159,10 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
             .single();
 
           if (!error && data) {
+            console.log('Message with profile loaded:', data);
             setMessages(prev => [...prev, data]);
+          } else {
+            console.error('Error loading new message:', error);
           }
         }
       )
@@ -140,7 +170,7 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
 
     // Subscribe to presence changes
     const presenceChannel = supabase
-      .channel('presence')
+      .channel('presence-channel')
       .on(
         'postgres_changes',
         {
@@ -150,12 +180,16 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
           filter: `room_id=eq.${roomId}`
         },
         async () => {
+          console.log('Presence changed, reloading users');
+          
           // Reload users when presence changes
           const { data, error } = await supabase
             .from('user_presence')
             .select(`
-              *,
-              profiles (
+              user_id,
+              status,
+              last_seen,
+              profiles!user_presence_user_id_fkey (
                 username,
                 display_name
               )
@@ -164,7 +198,10 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
             .eq('status', 'online');
 
           if (!error && data) {
+            console.log('Users reloaded:', data);
             setUsers(data);
+          } else {
+            console.error('Error reloading users:', error);
           }
         }
       )
@@ -174,6 +211,7 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
     const presenceInterval = setInterval(updatePresence, 30000);
 
     return () => {
+      console.log('Cleaning up subscriptions');
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(presenceChannel);
       clearInterval(presenceInterval);
@@ -182,6 +220,8 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
 
   const sendMessage = async (content: string) => {
     if (!user || !content.trim()) return;
+
+    console.log('Sending message:', content);
 
     const { error } = await supabase
       .from('messages')
@@ -198,6 +238,8 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         description: "Failed to send message to the neural network",
         variant: "destructive"
       });
+    } else {
+      console.log('Message sent successfully');
     }
   };
 

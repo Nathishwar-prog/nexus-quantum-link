@@ -22,37 +22,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Setting up auth state listener');
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, updating presence');
           setTimeout(() => {
             updateUserPresence();
-          }, 0);
+          }, 100);
         }
       }
     );
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const updateUserPresence = async () => {
     if (!user) return;
     
     try {
+      console.log('Updating user presence for:', user.email);
       await supabase.rpc('update_user_presence', {
         p_room_id: '550e8400-e29b-41d4-a716-446655440000',
         p_status: 'online'
       });
+      console.log('Presence updated successfully');
     } catch (error) {
       console.error('Error updating presence:', error);
     }
@@ -60,6 +72,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
+      console.log('Signing up user:', email);
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -70,12 +84,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        console.error('Signup error:', error);
         toast({
           title: "Neural Link Failed",
           description: error.message,
           variant: "destructive"
         });
       } else {
+        console.log('Signup successful');
         toast({
           title: "Neural Connection Established",
           description: "Welcome to the NEXUS network! Check your email to verify your account.",
@@ -84,24 +100,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error };
     } catch (error: any) {
+      console.error('Signup exception:', error);
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Signing in user:', email);
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        console.error('Signin error:', error);
         toast({
           title: "Neural Link Failed",
           description: error.message,
           variant: "destructive"
         });
       } else {
+        console.log('Signin successful');
         toast({
           title: "Neural Link Established",
           description: "Welcome back to NEXUS!",
@@ -110,12 +131,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error };
     } catch (error: any) {
+      console.error('Signin exception:', error);
       return { error };
     }
   };
 
   const signOut = async () => {
     try {
+      console.log('Signing out user');
       await supabase.auth.signOut();
       toast({
         title: "Neural Link Terminated",
