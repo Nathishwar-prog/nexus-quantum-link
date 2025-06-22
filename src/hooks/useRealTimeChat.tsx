@@ -47,11 +47,7 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
           content,
           user_id,
           room_id,
-          created_at,
-          profiles!messages_user_id_fkey (
-            username,
-            display_name
-          )
+          created_at
         `)
         .eq('room_id', roomId)
         .order('created_at', { ascending: true })
@@ -66,7 +62,12 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         });
       } else {
         console.log('Messages loaded:', data);
-        setMessages(data || []);
+        // Transform data to match Message interface
+        const messagesWithProfiles = data?.map(msg => ({
+          ...msg,
+          profiles: null // We'll load profiles separately if needed
+        })) || [];
+        setMessages(messagesWithProfiles);
       }
       setLoading(false);
     };
@@ -86,18 +87,19 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         .select(`
           user_id,
           status,
-          last_seen,
-          profiles!user_presence_user_id_fkey (
-            username,
-            display_name
-          )
+          last_seen
         `)
         .eq('room_id', roomId)
         .eq('status', 'online');
 
       if (!error && data) {
         console.log('Users loaded:', data);
-        setUsers(data);
+        // Transform data to match UserPresence interface
+        const usersWithProfiles = data.map(user => ({
+          ...user,
+          profiles: null // We'll load profiles separately if needed
+        }));
+        setUsers(usersWithProfiles);
       } else {
         console.error('Error loading users:', error);
       }
@@ -141,29 +143,18 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
         async (payload) => {
           console.log('New message received:', payload);
           
-          // Fetch the message with profile data
-          const { data, error } = await supabase
-            .from('messages')
-            .select(`
-              id,
-              content,
-              user_id,
-              room_id,
-              created_at,
-              profiles!messages_user_id_fkey (
-                username,
-                display_name
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single();
+          // Create message with basic data
+          const newMessage: Message = {
+            id: payload.new.id,
+            content: payload.new.content,
+            user_id: payload.new.user_id,
+            room_id: payload.new.room_id,
+            created_at: payload.new.created_at,
+            profiles: null
+          };
 
-          if (!error && data) {
-            console.log('Message with profile loaded:', data);
-            setMessages(prev => [...prev, data]);
-          } else {
-            console.error('Error loading new message:', error);
-          }
+          console.log('Message processed:', newMessage);
+          setMessages(prev => [...prev, newMessage]);
         }
       )
       .subscribe();
@@ -188,18 +179,18 @@ export const useRealTimeChat = (roomId: string = '550e8400-e29b-41d4-a716-446655
             .select(`
               user_id,
               status,
-              last_seen,
-              profiles!user_presence_user_id_fkey (
-                username,
-                display_name
-              )
+              last_seen
             `)
             .eq('room_id', roomId)
             .eq('status', 'online');
 
           if (!error && data) {
             console.log('Users reloaded:', data);
-            setUsers(data);
+            const usersWithProfiles = data.map(user => ({
+              ...user,
+              profiles: null
+            }));
+            setUsers(usersWithProfiles);
           } else {
             console.error('Error reloading users:', error);
           }
